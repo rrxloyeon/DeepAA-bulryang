@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import math
 from PIL import Image
+from cifar10 import load_data
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 tf.get_logger().setLevel(logging.ERROR)
@@ -36,7 +37,7 @@ def get_cifar100_data(num_classes=100, val_size=10000):
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 def get_cifar10_data(num_classes=10, val_size=10000):
-    (x_train_val, y_train_val), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    (x_train_val, y_train_val), (x_test, y_test) = load_data()
     y_train_val = y_train_val.squeeze()
     y_test = y_test.squeeze()
     if val_size > 0:
@@ -44,6 +45,7 @@ def get_cifar10_data(num_classes=10, val_size=10000):
     else:
         x_train, y_train = x_train_val, y_train_val
         x_val, y_val = None, None
+
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 def get_nepes_data(data_root):
@@ -62,19 +64,38 @@ def get_nepes_data(data_root):
         for f in file_list[:int(0.6*length)]:
             img= Image.open(os.path.join(data_root, key, f))
             x_train.append(np.array(img))
-            y_train.append(value)
+            y_train.append(np.uint8(value))
 
         for f in file_list[int(0.6*length):int(0.8*length)]:
             img= Image.open(os.path.join(data_root, key, f))
             x_val.append(np.array(img))
-            y_val.append(value)
+            y_val.append(np.uint8(value))
         
         for f in file_list[int(0.8*length):]:
             img= Image.open(os.path.join(data_root, key, f))
             x_test.append(np.array(img))
-            y_test.append(value)
+            y_test.append(np.uint8(value))
 
-    return x_train, y_train, x_val, y_val, x_test, y_test, num_classes
+    x_train_arr = np.empty((len(x_train),400,400,3), dtype='uint8')
+    x_val_arr = np.empty((len(x_val),400,400,3), dtype='uint8')
+    x_test_arr = np.empty((len(x_test),400,400,3), dtype='uint8')
+
+    for i in range(len(x_train)):
+        if x_train[i].shape==(400,400,3):
+            x_train_arr[i] = x_train[i]
+    y_train = np.array(y_train)
+
+    for i in range(len(x_val)):
+        if x_val[i].shape==(400,400,3):
+            x_val_arr[i] = x_val[i]
+    y_val = np.array(y_val)
+
+    for i in range(len(x_test)):
+        if x_test[i].shape==(400,400,3):
+            x_test_arr[i] = x_test[i]
+    y_test = np.array(y_test)
+
+    return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
 
 class DataGenerator(Sequence):
     def __init__(self, 
@@ -217,7 +238,7 @@ class DataAugmentation(object):
         elif 'cifar' in self.dataset:
             assert type(labels[0]) == np.uint8
         if 'nepes' in self.dataset:
-            assert type(labels[0]) == np.int32
+            assert type(labels[0]) == np.uint8
         else:
             raise Exception('Unrecognized dataset')
 
