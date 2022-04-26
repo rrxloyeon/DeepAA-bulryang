@@ -76,7 +76,7 @@ tf.random.set_seed(int(args.seed))
 ops_mid_magnitude = get_mid_magnitude(args.l_mags)
 args.l_ops, args.l_uniq = get_lops_luniq(args, ops_mid_magnitude)
 args.img_size = get_img_size(args)
-train_ds, val_ds, test_ds, search_ds = get_dataset(args)
+train_ds, val_ds, test_ds, search_ds = get_dataset(args) #args.n_classes nepes 데이터에 맞게 수정해주는 부분
 nb_train_steps = len(train_ds)
 augmentation_default, augmentation_search, augmentation_test = get_augmentation(args)
 _, test_loss_fun, val_loss_fun = get_loss_fun()
