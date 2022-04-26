@@ -58,6 +58,7 @@ def get_nepes_data(data_root):
         np.random.shuffle(file_list)
         length = len(file_list) #해당 class의 사진 개수
 
+        #어떤 클래스는 너무 작아서 충분한 데이터셋 확보 못해서 에러뜸.여기 어딘가 수정필요할듯
         for f in file_list[:int(0.6*length)]:
             img= Image.open(os.path.join(data_root, key, f))
             x_train.append(np.array(img))
