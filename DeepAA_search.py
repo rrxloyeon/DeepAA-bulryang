@@ -1,13 +1,13 @@
-_PARALLEL_BATCH_small, _PARALLEL_BATCH_median, _PARALLEL_BATCH_large = 16, 128, 256 # 64
+_PARALLEL_BATCH_small, _PARALLEL_BATCH_median, _PARALLEL_BATCH_large = 16, 16, 16 # 64
 import os
 
 import sys
 import numpy as np
 import tensorflow as tf
 tf.config.threading.set_inter_op_parallelism_threads(0)
-gpus = tf.config.list_physical_devices('GPU')
+gpus = tf.config.list_physical_devices('GPU') #GPU:0, 1
 for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
+    tf.config.experimental.set_memory_growth(gpu, True) #allow memory growth to allocate larger memory
 
 import multiprocessing
 import argparse
@@ -24,20 +24,21 @@ import matplotlib
 matplotlib.use('Agg')
 from utils import Logger as myLogger
 from utils import repeat
+import pdb
 
 
 parser = argparse.ArgumentParser()
 # pretrain
 parser.add_argument('--use_model', default='WRN_28_10', type=str, help='Model used for search')
 parser.add_argument('--dataset', default='cifar10', type=str, help='Dataset, e.g., cifar10, imagenet, nepes')
-parser.add_argument('--n_classes', default=100, type=int, help='Number of classes')
+parser.add_argument('--n_classes', default=14, type=int, help='Number of classes')
 parser.add_argument('--nb_epochs', default=45, type=int, help='Number of epochs for pretrain')
 parser.add_argument('--pretrain_size', default=5000, type=int, help='Number of images for pretraining')
 parser.add_argument('--l_mags', default=13, type=int, help='Number of magnitudes, should be an odd number')
 parser.add_argument('--policy_lr', default=0.025, type=float, help='Policy learning rate')
 parser.add_argument('--pretrain_lr', default=0.1, type=float, help='maximum learning rate')
-parser.add_argument('--batch_size', default=128, type=int, help='Training batch size')
-parser.add_argument('--val_batch_size', default=1024, type=int, help='Validation batch size')
+parser.add_argument('--batch_size', default=128, type=int, help='Training batch size') #number of data in one batch
+parser.add_argument('--val_batch_size', default=20, type=int, help='Validation batch size') #original: 1024
 parser.add_argument('--test_batch_size', default=512, type=int, help='Testing batch size')
 parser.add_argument('--clip_policy_gradient_norm', default=5.0, type=float, help='clipping the policy gradient by norm')
 parser.add_argument('--debug', default=False, action='store_true', help='Debugging')
@@ -67,8 +68,8 @@ elif args.use_model in ['WRN_40_2']:
 else:
     raise Exception('Unrecognized model {}'.format(args.use_model))
 
-n_cpus = multiprocessing.cpu_count()
-pool = multiprocessing.Pool(processes=n_cpus) if args.use_pool else None
+n_cpus = multiprocessing.cpu_count() #24
+pool = multiprocessing.Pool(processes=n_cpus) if args.use_pool else None #<multiprocessing.pool.Pool state=RUN pool_size=24>
 np.random.seed(int(args.seed))
 tf.random.set_seed(int(args.seed))
 
@@ -76,12 +77,12 @@ tf.random.set_seed(int(args.seed))
 ops_mid_magnitude = get_mid_magnitude(args.l_mags)
 args.l_ops, args.l_uniq = get_lops_luniq(args, ops_mid_magnitude)
 args.img_size = get_img_size(args)
-train_ds, val_ds, test_ds, search_ds = get_dataset(args) #args.n_classes nepes 데이터에 맞게 수정해주는 부분
+train_ds, val_ds, test_ds, search_ds = get_dataset(args) #args.n_classes nepes 데이터에 맞게 수정
 nb_train_steps = len(train_ds)
 augmentation_default, augmentation_search, augmentation_test = get_augmentation(args)
 _, test_loss_fun, val_loss_fun = get_loss_fun()
-mirrored_strategy = tf.distribute.MirroredStrategy()
-with mirrored_strategy.scope():
+mirrored_strategy = tf.distribute.MirroredStrategy() #mirrored_strategy.num_replicas_in_sync=2
+with mirrored_strategy.scope(): #.scope()안에서 모델 만들어야함.
     model = get_model(args, args.use_model, args.n_classes)
     checkpoint = tf.train.Checkpoint(model=model)
     train_loss_fun = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True,
@@ -124,7 +125,7 @@ def train_step(images_aug, labels, clip_gradient_norm):
     bs = len(images_aug)
     with tf.GradientTape() as tape:
         labels_aug_pred = model(images_aug, training=True)
-        loss_aug = tf.reduce_mean(train_loss_fun(labels, labels_aug_pred))
+        loss_aug = tf.reduce_mean(train_loss_fun(labels, labels_aug_pred)) #CE로 loss 평균 계산
         loss_aug += sum(model.losses)
     grad_net = tape.gradient(loss_aug, model.trainable_variables)
     if clip_gradient_norm > 0:
@@ -233,7 +234,7 @@ def policy_gradient_stage1(reduce_random_mat,
 
     # 1) Step1: Get gradients of augmented and clean data
     def one_batch_grad(imgs, labs, w1, w2, grad):
-        grad_new = step2_cal_JVP_vStep(imgs, labs, w1, w2)
+        grad_new = step2_cal_JVP_vStep(imgs, labs, w1, w2) 
         grad = tf.nest.map_structure(lambda g1, g2: g1+g2, grad, grad_new)
         return grad
 
@@ -254,8 +255,8 @@ def policy_gradient_stage1(reduce_random_mat,
         )
         return grad
 
-    grad_val = cal_grad(images_val, labels_val, tf.constant(1.0, dtype=tf.float32), tf.ones(val_bs, dtype=tf.float32)/tf.cast(val_bs, dtype=tf.float32))
-    grad_train = cal_grad(images_aug, labels_aug, weight_1 * mult, weights_2)
+    grad_val = cal_grad(images_val, labels_val, tf.constant(1.0, dtype=tf.float32), tf.ones(val_bs, dtype=tf.float32)/tf.cast(val_bs, dtype=tf.float32)) #*** retracing ***
+    grad_train = cal_grad(images_aug, labels_aug, weight_1 * mult, weights_2)                                       #*** retracing ***
     grad_train = tf.nest.map_structure(lambda g: g/mult, grad_train) # for numerical stability
 
     # 2) compute tangents
@@ -268,7 +269,7 @@ def policy_gradient_stage1(reduce_random_mat,
     # 3) compute JVP
     def one_step_JVP(grad_importance_array, imgs, labs, k):
         grad_importance_ = tf.stop_gradient(
-            step2_cal_JVP_jvpStep(imgs, labs, g_norm_train, g_norm_val, tangents)
+            step2_cal_JVP_jvpStep(imgs, labs, g_norm_train, g_norm_val, tangents) 
         )
         grad_importance_array = grad_importance_array.write(tf.cast(k, dtype=tf.int32), grad_importance_)
         return grad_importance_array
@@ -288,7 +289,7 @@ def policy_gradient_stage1(reduce_random_mat,
             parallel_iterations = 1,
         )
         return grad_importance_array.concat()
-    grad_importance = run_JVP(images_aug, labels_aug)
+    grad_importance = run_JVP(images_aug, labels_aug)       #*** retracing ***
 
     if args.repeat_random_ops:
         grad_importance = tf.matmul(grad_importance[tf.newaxis], reduce_random_mat, transpose_b=True)[0]
@@ -380,7 +381,8 @@ def policy_gradient_stage2(reduce_random_mat, images_aug_s, labels_aug_s, images
     aug_n, l_seq, w, h, c = images_aug2.shape
     images_aug2_ = tf.reshape(images_aug2, [aug_n * l_seq, w, h, c])
     labels_ = tf.reshape(labels, [aug_n * l_seq])
-    grad_importance = run_JVP(images_aug2_, labels_)
+    grad_importance = run_JVP(images_aug2_, labels_)            #*** retracing ***
+
     grad_importance = tf.reshape(grad_importance, [aug_n, l_seq])
     if args.repeat_random_ops:
         grad_importance = tf.matmul(grad_importance, reduce_random_mat, transpose_b=True)
@@ -391,7 +393,7 @@ def policy_gradient_stage2(reduce_random_mat, images_aug_s, labels_aug_s, images
 
 @tf.function
 def distributed_train_stage1(dist_inputs):
-    per_replica_cos_sim, per_replica_grad_importance = mirrored_strategy.run(policy_gradient_stage1, args=(*dist_inputs,))
+    per_replica_cos_sim, per_replica_grad_importance = mirrored_strategy.run(policy_gradient_stage1, args=(*dist_inputs,)) #현재 에러
     return mirrored_strategy.experimental_local_results(per_replica_cos_sim), mirrored_strategy.experimental_local_results(per_replica_grad_importance)
 
 @tf.function
@@ -410,8 +412,8 @@ def train_policy_stage1(stage, images_val_, labels_val_, images_batch, labels_ba
                                                    np.array([[0]]*search_bs*val_bs, dtype=np.int32),
                                                    np.array([[0]]*search_bs*val_bs, dtype=np.float32) / float(args.l_mags - 1),
                                                    use_post_aug=True, pool=pool, chunksize=args.chunk_size)
-
-    images_val_ = np.reshape(images_val_, [search_bs, val_bs, *args.img_size])
+    
+    images_val_ = np.reshape(images_val_, [search_bs, val_bs, *args.img_size]) # [searchbs,valbs,*imgsize]=[16,0,224,224,3]
     labels_val_ = np.reshape(labels_val_, [search_bs, val_bs])
 
     images_batch = repeat(images_batch, EXP, axis=0)
@@ -565,7 +567,7 @@ def search_policy(search_bno, search_bs=16, val_bs=128):
         pbar = Progbar(target=search_bno, interval=1, width=30)
         for bno in range(search_bno):
             images_val_, labels_val_, images_batch, labels_batch = data_prefetch_iterator.next()
-
+            
             if stage == 1:
                 train_policy_stage1(stage, images_val_, labels_val_, images_batch, labels_batch)
             elif stage > 1:
@@ -575,8 +577,9 @@ def search_policy(search_bno, search_bs=16, val_bs=128):
 
 
 if __name__ == '__main__':
-    search_policy(search_bno=args.search_bno, search_bs=args.train_same_labels, val_bs=64)
+    search_policy(search_bno=args.search_bno, search_bs=args.train_same_labels, val_bs=16) #val_bs 64였음
     save_policy(args, all_using_policies, augmentation_search)
 
     pool.close()
     pool.join()
+    

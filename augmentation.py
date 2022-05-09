@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 import math
 
-IMAGENET_SIZE = (224, 224) # (width, height) may set to (244, 224)
+IMAGENET_SIZE = (100, 100) # (width, height) may set to (244, 224)
 
 _IMAGENET_PCA = {
     'eigval': [0.2175, 0.0188, 0.0045],

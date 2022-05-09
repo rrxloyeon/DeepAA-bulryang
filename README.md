@@ -6,6 +6,11 @@ This is the official implementation of Deep AutoAugment ([DeepAA](https://openre
   <img src="images/DeepAA.png" alt="DeepAA" width="70%"> <br />
 </p>
 
+## NEPES 실행 명령어
+```shell
+python DeepAA_search.py --dataset nepes --use_model WRN_40_2 --n_policies 6 --pretrain_lr 0.1 --seed 1 --batch_size 16 --test_batch_size 16 --policy_lr 0.025 --l_mags 13 --use_pool --pretrain_size 500 --nb_epochs 45 --EXP_G 16 --EXP_gT_factor=4 --train_same_labels 16
+```
+
 ## 5-Minute Explanation Video
 Click the figure to watch this short video explaining our work.
 

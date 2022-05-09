@@ -4,7 +4,6 @@ import logging
 import numpy as np
 import math
 from PIL import Image
-from cifar10 import load_data
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 tf.get_logger().setLevel(logging.ERROR)
@@ -37,7 +36,7 @@ def get_cifar100_data(num_classes=100, val_size=10000):
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 def get_cifar10_data(num_classes=10, val_size=10000):
-    (x_train_val, y_train_val), (x_test, y_test) = load_data()
+    (x_train_val, y_train_val), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     y_train_val = y_train_val.squeeze()
     y_test = y_test.squeeze()
     if val_size > 0:

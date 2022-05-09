@@ -1,3 +1,4 @@
+from dataclasses import replace
 import os
 import logging
 import numpy as np
@@ -26,6 +27,7 @@ from augmentation import RandResizeCrop_imagenet, centerCrop_imagenet
 
 from policy import DA_Policy_logits
 from augmentation import IMAGENET_SIZE
+import pdb
 
 import torch
 import threading
@@ -167,6 +169,7 @@ def get_dataset(args):
         search_ds = DataGenerator(x_search, y_search, batch_size=args.batch_size, drop_last=True)
         val_ds = DataGenerator(x_val, y_val, batch_size=args.val_batch_size, drop_last=True)
         test_ds = DataGenerator(x_test, y_test, batch_size=args.test_batch_size, drop_last=False, shuffle=False)  # setting shuffle=False for parallel evaluation
+    
     elif args.dataset == 'imagenet':
         assert args.n_classes == 1000
         def collate_fn_imagenet_list(l):  # return a list
@@ -185,18 +188,24 @@ def get_dataset(args):
         )
 
     elif args.dataset == 'nepes':
-        x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_nepes_data(data_root='/home/esoc/Data/Bulryang_12inch')
-        x_train, y_train = x_train_[:args.pretrain_size], y_train_[:args.pretrain_size]
-        x_search, y_search = x_train_[args.pretrain_size:], y_train_[args.pretrain_size:]
-        args.n_classes == num_class
+        x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_nepes_data(data_root='/home/esoc/datasets/Bulryang_12inch')
+
+        np.random.seed(args.seed)
+        pt_idx=np.random.choice(len(x_train_),args.pretrain_size, replace=False)
+
+
+        x_train, y_train = x_train_[pt_idx], y_train_[pt_idx]
+        x_search, y_search = np.delete(x_train_, pt_idx, 0), np.delete(y_train_, pt_idx, 0)
+
+        
+
+        args.n_classes = num_class
 
         train_ds = DataGenerator(x_train, y_train, batch_size=args.batch_size, drop_last=True)
         search_ds = DataGenerator(x_search, y_search, batch_size=args.batch_size, drop_last=True)
         val_ds = DataGenerator(x_val, y_val, batch_size=args.val_batch_size, drop_last=True)
         test_ds = DataGenerator(x_test, y_test, batch_size=args.test_batch_size, drop_last=False, shuffle=False)
-
-
-
+        
     else:
         raise Exception('Unrecognized dataset')
 
@@ -351,8 +360,8 @@ class PrefetchGenerator(threading.Thread):
     def sample_label_and_batch(dataset, bs, n_classes, MAX_iterations=100):
         for k in range(MAX_iterations):
             try:
-                lab = random.randint(0, n_classes-1)
-                imgs, labs = dataset.sample_labeled_data_batch(lab, bs)
+                lab = random.randint(0, n_classes-1) #사이의 int 하나 반환
+                imgs, labs = dataset.sample_labeled_data_batch(lab, bs) #dataset: val_ds
             except:
                 print('Insufficient data in a single class, try {}/{}'.format(k, MAX_iterations))
                 continue
