@@ -1,13 +1,32 @@
-#찾은 policy 결과 파일 읽기.
+#찾은 policy 결과 파일 읽기
 import numpy as np
 import pandas as pd
+import pdb
 
-npz_file_name = "policy_DeepAA_cifar_1"  #파일 사용 시 이부분만 수정하면 됨
+a="nepes_pretrain_45epoch" #사용시 이부분 바꾸면됨
+npz_file_name = "policy_DeepAA_2022-05-07-15-27-18-896994"  #사용시 이부분 바꾸면됨
 
-npz_file = "./policy_port/"+ npz_file_name +".npz"
+xlsx_name = "policy_port/" + a + ".xlsx"
+npz_file = "policy_port/"+ npz_file_name +".npz"
 data=np.load(npz_file)
-data_df = pd.DataFrame(data)
+data_df = pd.DataFrame(data['policy_probs'])
+#data_df1 = pd.DataFrame(data['l_ops']) #l_ops =18
+#data_df2 = pd.DataFrame(data['l_mags']) #l_mags =13
+data_df3 = pd.DataFrame(data['ops'])
+data_df4 = pd.DataFrame(data['mags'])
+data_df5 = pd.DataFrame(data['op_names'])
 
+
+with pd.ExcelWriter(xlsx_name) as writer:
+    data_df.to_excel( writer, sheet_name = 'policy_probs')
+    #data_df1.to_excel( writer, sheet_name = 'l_ops')
+    #data_df2.to_excel( writer, sheet_name = 'l_mags')
+    data_df3.to_excel( writer, sheet_name = 'ops')
+    data_df4.to_excel( writer, sheet_name = 'mags')
+    data_df5.to_excel( writer, sheet_name = 'op_names')
+
+
+"""
 print("=================================policy_probs===================================")
 print(data['policy_probs'])
 print("======================================l_ops===========================================")
@@ -20,3 +39,4 @@ print("===========================mags===========================")
 print(data['mags'])
 print("========================op_names==============================")
 print(data['op_names'])
+"""
