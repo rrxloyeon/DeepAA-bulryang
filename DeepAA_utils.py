@@ -148,6 +148,8 @@ def get_img_size(args):
         return (*IMAGENET_SIZE, 3)
     elif 'nepes' in args.dataset:
         return (*IMAGENET_SIZE, 3)
+    elif 'dmd' in args.dataset:
+        return (*IMAGENET_SIZE, 3)
     else:
         raise Exception
 
@@ -190,6 +192,25 @@ def get_dataset(args):
     elif args.dataset == 'nepes':
         x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_nepes_data(data_root='/home/esoc/datasets/Bulryang_12inch')
 
+        np.random.seed(args.seed)
+        pt_idx=np.random.choice(len(x_train_),args.pretrain_size, replace=False)
+
+
+        x_train, y_train = x_train_[pt_idx], y_train_[pt_idx]
+        x_search, y_search = np.delete(x_train_, pt_idx, 0), np.delete(y_train_, pt_idx, 0)
+
+        
+
+        args.n_classes = num_class
+
+        train_ds = DataGenerator(x_train, y_train, batch_size=args.batch_size, drop_last=True)
+        search_ds = DataGenerator(x_search, y_search, batch_size=args.batch_size, drop_last=True)
+        val_ds = DataGenerator(x_val, y_val, batch_size=args.val_batch_size, drop_last=True)
+        test_ds = DataGenerator(x_test, y_test, batch_size=args.test_batch_size, drop_last=False, shuffle=False)
+        
+    elif args.dataset == 'dmd' :
+        x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_nepes_data(data_root="/home/esoc/datasets/DMD/train")#'./dataset_test')
+   
         np.random.seed(args.seed)
         pt_idx=np.random.choice(len(x_train_),args.pretrain_size, replace=False)
 
@@ -272,6 +293,27 @@ def get_augmentation(args):
                                                     centerCrop_imagenet,
                                                 ])
     
+    elif 'dmd' in args.dataset:
+        augmentation_default = DataAugmentation(num_classes=args.n_classes, dataset=args.dataset,
+                                                image_shape=args.img_size,
+                                                ops_list=(None, None),
+                                                default_pre_aug=None,
+                                                default_post_aug=[RandResizeCrop_imagenet, #
+                                                                  RandFlip])
+
+        augmentation_search = DataAugmentation(num_classes=args.n_classes, dataset=args.dataset, image_shape=args.img_size,
+                                               ops_list=aug_op_nepes_list(),
+                                               default_pre_aug=None,
+                                               default_post_aug=None)
+
+
+        augmentation_test = DataAugmentation(num_classes=args.n_classes, dataset=args.dataset,
+                                                image_shape=args.img_size,
+                                                ops_list=(None, None),
+                                                default_pre_aug=None,
+                                                default_post_aug=[
+                                                    centerCrop_imagenet,
+                                                ])
 
     return augmentation_default, augmentation_search, augmentation_test
 
@@ -316,6 +358,8 @@ def get_lops_luniq(args, ops_mid_magnitude):
     elif 'imagenet' in args.dataset:
         _, op_names = aug_op_imagenet_list()
     elif 'nepes' in args.dataset:
+        _, op_names = aug_op_nepes_list()
+    elif 'dmd' in args.dataset:
         _, op_names = aug_op_nepes_list()
     else:
         raise Exception('Unknown dataset ={}'.format(args.dataset))

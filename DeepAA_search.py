@@ -402,18 +402,19 @@ def distributed_train_stage2(dist_inputs):
     return mirrored_strategy.experimental_local_results(per_replica_cos_sim), mirrored_strategy.experimental_local_results(per_replica_grad_importance)
 
 def train_policy_stage1(stage, images_val_, labels_val_, images_batch, labels_batch):
+    # images_val_ is list of list of ndarray(400, 400, 3)
     search_bs = len(images_val_)
     val_bs = len(images_val_[0])
     assert search_bs == len(images_batch), 'Check dimensions'
     assert len(images_val_) % search_bs == 0, 'Use different validation batch for different search data point'
 
     EXP = 1 # expansion factor
-    images_val_, labels_val_ = augmentation_test(sum(images_val_, []), np.concatenate(labels_val_),
+    images_val_, labels_val_ = augmentation_test(sum(images_val_, []), np.concatenate(labels_val_), # (37, 100, 100, 3)
                                                    np.array([[0]]*search_bs*val_bs, dtype=np.int32),
                                                    np.array([[0]]*search_bs*val_bs, dtype=np.float32) / float(args.l_mags - 1),
                                                    use_post_aug=True, pool=pool, chunksize=args.chunk_size)
     
-    images_val_ = np.reshape(images_val_, [search_bs, val_bs, *args.img_size]) # [searchbs,valbs,*imgsize]=[16,0,224,224,3]
+    images_val_ = np.reshape(images_val_, [search_bs, val_bs, *args.img_size]) # [searchbs,valbs,*imgsize]=[16,0,224,224,3] # 이게 지금 뭐하는 라인인 거지?
     labels_val_ = np.reshape(labels_val_, [search_bs, val_bs])
 
     images_batch = repeat(images_batch, EXP, axis=0)

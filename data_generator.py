@@ -172,6 +172,8 @@ class DataAugmentation(object):
             assert self.image_shape == (32, 32, 3)
         elif 'nepes' in self.dataset:
             assert self.image_shape == (*IMAGENET_SIZE, 3)
+        elif 'dmd' in self.dataset:
+            assert self.image_shape == (*IMAGENET_SIZE, 3)
         else:
             raise Exception('Unrecognized dataset')
 
@@ -205,6 +207,11 @@ class DataAugmentation(object):
                 pil_img = self.crop_IMAGENET(pil_img)
             img = np.asarray(pil_img, dtype=np.uint8)
             return idx, img
+        elif 'dmd' in self.dataset:
+            if aug_finish:
+                pil_img = self.crop_IMAGENET(pil_img)
+            img = np.asarray(pil_img, dtype=np.uint8)
+            return idx, img
         else:
             raise Exception
 
@@ -215,6 +222,8 @@ class DataAugmentation(object):
         elif 'imagenet' in self.dataset:
             x = (x - IMAGENET_MEANS) / IMAGENET_STDS
         elif 'nepes' in self.dataset:
+            x = (x - IMAGENET_MEANS) / IMAGENET_STDS
+        elif 'dmd' in self.dataset:
             x = (x - IMAGENET_MEANS) / IMAGENET_STDS #
         else:
             raise Exception('Unrecoginized dataset')
@@ -237,6 +246,8 @@ class DataAugmentation(object):
         elif 'cifar' in self.dataset:
             assert type(labels[0]) == np.uint8
         if 'nepes' in self.dataset:
+            assert type(labels[0]) == np.uint8
+        elif 'dmd' in self.dataset:
             assert type(labels[0]) == np.uint8
         else:
             raise Exception('Unrecognized dataset')
