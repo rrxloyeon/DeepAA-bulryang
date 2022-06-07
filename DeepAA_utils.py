@@ -27,7 +27,6 @@ from augmentation import RandResizeCrop_imagenet, centerCrop_imagenet
 
 from policy import DA_Policy_logits
 from augmentation import IMAGENET_SIZE
-import pdb
 
 import torch
 import threading
@@ -210,7 +209,7 @@ def get_dataset(args):
         
     elif args.dataset == 'dmd' :
         x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_nepes_data(data_root="/home/esoc/datasets/DMD/train")#'./dataset_test')
-   
+
         np.random.seed(args.seed)
         pt_idx=np.random.choice(len(x_train_),args.pretrain_size, replace=False)
 

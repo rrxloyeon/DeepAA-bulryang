@@ -48,6 +48,8 @@ def get_cifar10_data(num_classes=10, val_size=10000):
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 def get_nepes_data(data_root):
+    import pdb
+    pdb.set_trace()
     classes_list = os.listdir(data_root)
     classes = {name: i for i, name in enumerate(classes_list)}
     num_classes = len(classes)
@@ -61,20 +63,21 @@ def get_nepes_data(data_root):
 
         #어떤 클래스는 너무 작아서 충분한 데이터셋 확보 못해서 에러뜸.여기 어딘가 수정필요할듯
         for f in file_list[:int(0.6*length)]:
-            img= Image.open(os.path.join(data_root, key, f))
-            x_train.append(np.array(img))
-            y_train.append(np.uint8(value))
-
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_train.append(np.array(img))
+                y_train.append(np.uint8(value))
+        print("{}:{}:len(x_train)={}".format(value, key, len(x_train)))
         for f in file_list[int(0.6*length):int(0.8*length)]:
-            img= Image.open(os.path.join(data_root, key, f))
-            x_val.append(np.array(img))
-            y_val.append(np.uint8(value))
-        
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_val.append(np.array(img))
+                y_val.append(np.uint8(value))
+        print("{}:{}:len(x_val)={}".format(value, key, len(x_val)))
         for f in file_list[int(0.8*length):]:
-            img= Image.open(os.path.join(data_root, key, f))
-            x_test.append(np.array(img))
-            y_test.append(np.uint8(value))
-
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_test.append(np.array(img))
+                y_test.append(np.uint8(value))
+        print("{}:{}:len(x_test)={}".format(value, key, len(x_test)))
+        pdb.set_trace() # shape of img (720, 1280, 3)
     x_train_arr = np.empty((len(x_train),400,400,3), dtype='uint8')
     x_val_arr = np.empty((len(x_val),400,400,3), dtype='uint8')
     x_test_arr = np.empty((len(x_test),400,400,3), dtype='uint8')
@@ -83,7 +86,7 @@ def get_nepes_data(data_root):
         if x_train[i].shape==(400,400,3):
             x_train_arr[i] = x_train[i]
     y_train = np.array(y_train)
-
+    pdb.set_trace()
     for i in range(len(x_val)):
         if x_val[i].shape==(400,400,3):
             x_val_arr[i] = x_val[i]
@@ -93,7 +96,7 @@ def get_nepes_data(data_root):
         if x_test[i].shape==(400,400,3):
             x_test_arr[i] = x_test[i]
     y_test = np.array(y_test)
-
+    pdb.set_trace()
     return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
 
 class DataGenerator(Sequence):
