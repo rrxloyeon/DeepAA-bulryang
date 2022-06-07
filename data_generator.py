@@ -48,8 +48,58 @@ def get_cifar10_data(num_classes=10, val_size=10000):
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 def get_nepes_data(data_root):
-    import pdb
-    pdb.set_trace()
+    classes_list = os.listdir(data_root)
+    classes = {name: i for i, name in enumerate(classes_list)}
+    num_classes = len(classes)
+
+    x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
+    for key, value in classes.items(): #클래스 하나씩 접근
+        file_list = os.listdir(os.path.join(data_root, key)) #해당 class의 파일 모두 file_list에 저장
+        np.random.seed(0)
+        np.random.shuffle(file_list)
+        length = len(file_list) #해당 class의 사진 개수
+
+        #어떤 클래스는 너무 작아서 충분한 데이터셋 확보 못해서 에러뜸.여기 어딘가 수정필요할듯
+        for f in file_list[:int(0.6*length)]:
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_train.append(np.array(img))
+                y_train.append(np.uint8(value))
+        print("{}:{}:len(x_train)={}".format(value, key, len(x_train)))
+
+        for f in file_list[int(0.6*length):int(0.8*length)]:
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_val.append(np.array(img))
+                y_val.append(np.uint8(value))
+        print("{}:{}:len(x_val)={}".format(value, key, len(x_val)))
+
+        for f in file_list[int(0.8*length):]:
+            with Image.open(os.path.join(data_root, key, f)) as img:
+                x_test.append(np.array(img))
+                y_test.append(np.uint8(value))
+        print("{}:{}:len(x_test)={}".format(value, key, len(x_test)))
+
+    x_train_arr = np.empty((len(x_train),400,400,3), dtype='uint8')
+    x_val_arr = np.empty((len(x_val),400,400,3), dtype='uint8')
+    x_test_arr = np.empty((len(x_test),400,400,3), dtype='uint8')
+
+    for i in range(len(x_train)):
+        if x_train[i].shape==(400,400,3):
+            x_train_arr[i] = x_train[i]
+    y_train = np.array(y_train)
+
+    for i in range(len(x_val)):
+        if x_val[i].shape==(400,400,3):
+            x_val_arr[i] = x_val[i]
+    y_val = np.array(y_val)
+
+    for i in range(len(x_test)):
+        if x_test[i].shape==(400,400,3):
+            x_test_arr[i] = x_test[i]
+    y_test = np.array(y_test)
+
+    return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
+
+def get_dmd_data(data_root):
     classes_list = os.listdir(data_root)
     classes = {name: i for i, name in enumerate(classes_list)}
     num_classes = len(classes)
@@ -77,26 +127,27 @@ def get_nepes_data(data_root):
                 x_test.append(np.array(img))
                 y_test.append(np.uint8(value))
         print("{}:{}:len(x_test)={}".format(value, key, len(x_test)))
-        pdb.set_trace() # shape of img (720, 1280, 3)
-    x_train_arr = np.empty((len(x_train),400,400,3), dtype='uint8')
-    x_val_arr = np.empty((len(x_val),400,400,3), dtype='uint8')
-    x_test_arr = np.empty((len(x_test),400,400,3), dtype='uint8')
+        # pdb.set_trace() # shape of img (720, 1280, 3)
+    
+    x_train_arr = np.empty((len(x_train),720, 1280, 3), dtype='uint8')
+    x_val_arr = np.empty((len(x_val),720, 1280, 3), dtype='uint8')
+    x_test_arr = np.empty((len(x_test),720, 1280, 3), dtype='uint8')
 
     for i in range(len(x_train)):
-        if x_train[i].shape==(400,400,3):
+        if x_train[i].shape==(720, 1280, 3):
             x_train_arr[i] = x_train[i]
     y_train = np.array(y_train)
-    pdb.set_trace()
+
     for i in range(len(x_val)):
-        if x_val[i].shape==(400,400,3):
+        if x_val[i].shape==(720, 1280, 3):
             x_val_arr[i] = x_val[i]
     y_val = np.array(y_val)
 
     for i in range(len(x_test)):
-        if x_test[i].shape==(400,400,3):
+        if x_test[i].shape==(720, 1280, 3):
             x_test_arr[i] = x_test[i]
     y_test = np.array(y_test)
-    pdb.set_trace()
+    # pdb.set_trace() # check length of x_train_arr
     return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
 
 class DataGenerator(Sequence):
@@ -128,13 +179,13 @@ class DataGenerator(Sequence):
         if self.shuffle:
             np.random.shuffle(self.indices)
 
-    def sample_labeled_data_batch(self, label, bs):
+    def sample_labeled_data_batch(self, label, bs): # bs = 16; DeepAA_search.py L#585 argumnet "val_bs=16"
         # suffle indices every time
         indices = np.arange(len(self._data))
         np.random.shuffle(indices)
         if isinstance(self.labels, list):
             labels = [self.labels[k] for k in indices]
-        else:
+        else: # val_ds : type(self.labels)=ndarray
             labels = self.labels[indices]
         matched_labels = np.array(labels) == int(label)
         matched_indices = [id for id, isMatched in enumerate(matched_labels) if isMatched]

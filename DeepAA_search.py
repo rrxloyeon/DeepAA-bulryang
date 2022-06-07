@@ -103,9 +103,11 @@ for k in range(args.n_policies):
 train_ds.on_epoch_end()
 train_ds_iter = iter(train_ds)
 def get_pretrain_data():
+    # pdb.set_trace() # check tpye of train_ds_iter=<class 'generator'>
     global train_ds_iter
     try:
         images, labels = next(train_ds_iter)
+        # pdb.set_trace() # check type of images=ndarray, shape of images = (args.batch_size, 720, 1280, 3)
     except:
         train_ds.on_epoch_end()
         train_ds_iter = iter(train_ds)
@@ -402,7 +404,9 @@ def distributed_train_stage2(dist_inputs):
     return mirrored_strategy.experimental_local_results(per_replica_cos_sim), mirrored_strategy.experimental_local_results(per_replica_grad_importance)
 
 def train_policy_stage1(stage, images_val_, labels_val_, images_batch, labels_batch):
-    # images_val_ is list of list of ndarray(400, 400, 3)
+    # images_val_ is list of list of ndarray (720, 1280, 3)
+    # labels_val_ is list of ndarray (2,)
+    # pdb.set_trace()
     search_bs = len(images_val_)
     val_bs = len(images_val_[0])
     assert search_bs == len(images_batch), 'Check dimensions'
@@ -561,7 +565,7 @@ def train_policy_stage2(stage, images_val_, labels_val_, images_batch, labels_ba
     del tape
 
 
-def search_policy(search_bno, search_bs=16, val_bs=128):
+def search_policy(search_bno, search_bs=1, val_bs=1):# search_bs=16, val_bs=128):
     data_prefetch_iterator = PrefetchGenerator(search_ds, val_ds, args.n_classes, search_bs, val_bs)
 
     for stage in range(1, args.n_policies + 1):
@@ -578,7 +582,7 @@ def search_policy(search_bno, search_bs=16, val_bs=128):
 
 
 if __name__ == '__main__':
-    search_policy(search_bno=args.search_bno, search_bs=args.train_same_labels, val_bs=16) #val_bs 64였음
+    search_policy(search_bno=args.search_bno, search_bs=args.train_same_labels, val_bs=2) # val_bs=16) #val_bs 64였음
     save_policy(args, all_using_policies, augmentation_search)
 
     pool.close()
