@@ -4,7 +4,7 @@ import pandas as pd
 import pdb
 
 a="nepes_pretrain_45epoch" #사용시 이부분 바꾸면됨
-npz_file_name = "policy_DeepAA_2022-05-07-15-27-18-896994"  #사용시 이부분 바꾸면됨
+npz_file_name = "policy_DeepAA_2022-06-10-23-52-06-535119"  #사용시 이부분 바꾸면됨
 
 xlsx_name = "policy_port/" + a + ".xlsx"
 npz_file = "policy_port/"+ npz_file_name +".npz"

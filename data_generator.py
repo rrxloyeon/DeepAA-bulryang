@@ -113,42 +113,26 @@ def get_dmd_data(data_root):
 
         #어떤 클래스는 너무 작아서 충분한 데이터셋 확보 못해서 에러뜸.여기 어딘가 수정필요할듯
         for f in file_list[:int(0.6*length)]:
-            with Image.open(os.path.join(data_root, key, f)) as img:
-                x_train.append(np.array(img))
-                y_train.append(np.uint8(value))
+            x_train.append(os.path.join(data_root, key, f))
+            y_train.append(np.uint8(value))
         print("{}:{}:len(x_train)={}".format(value, key, len(x_train)))
+
         for f in file_list[int(0.6*length):int(0.8*length)]:
-            with Image.open(os.path.join(data_root, key, f)) as img:
-                x_val.append(np.array(img))
-                y_val.append(np.uint8(value))
+            x_val.append(os.path.join(data_root, key, f))
+            y_val.append(np.uint8(value))
         print("{}:{}:len(x_val)={}".format(value, key, len(x_val)))
+        
         for f in file_list[int(0.8*length):]:
-            with Image.open(os.path.join(data_root, key, f)) as img:
-                x_test.append(np.array(img))
-                y_test.append(np.uint8(value))
+            x_test.append(os.path.join(data_root, key, f))
+            y_test.append(np.uint8(value))
         print("{}:{}:len(x_test)={}".format(value, key, len(x_test)))
         # pdb.set_trace() # shape of img (720, 1280, 3)
     
-    x_train_arr = np.empty((len(x_train),720, 1280, 3), dtype='uint8')
-    x_val_arr = np.empty((len(x_val),720, 1280, 3), dtype='uint8')
-    x_test_arr = np.empty((len(x_test),720, 1280, 3), dtype='uint8')
-
-    for i in range(len(x_train)):
-        if x_train[i].shape==(720, 1280, 3):
-            x_train_arr[i] = x_train[i]
     y_train = np.array(y_train)
-
-    for i in range(len(x_val)):
-        if x_val[i].shape==(720, 1280, 3):
-            x_val_arr[i] = x_val[i]
     y_val = np.array(y_val)
-
-    for i in range(len(x_test)):
-        if x_test[i].shape==(720, 1280, 3):
-            x_test_arr[i] = x_test[i]
     y_test = np.array(y_test)
-    # pdb.set_trace() # check length of x_train_arr
-    return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
+
+    return x_train, y_train, x_val, y_val, x_test, y_test, num_classes
 
 class DataGenerator(Sequence):
     def __init__(self, 
@@ -196,7 +180,13 @@ class DataGenerator(Sequence):
             print('Not enough matched data, required {}, but got {} instead'.format(bs, len(matched_indices)))
             batch_indices = matched_indices
         data_indices = indices[batch_indices]
-        return [self.data[k] for k in data_indices], np.array([self.labels[k] for k in data_indices], dtype=self.labels[0].dtype)
+
+        datat = []
+        for i in data_indices :
+            with Image.open(self.data[i]) as img :
+                datat.append(np.array(img))
+
+        return datat, np.array([self.labels[k] for k in data_indices], dtype=self.labels[0].dtype)
 
     def __len__(self):
         if self.drop_last:
@@ -207,10 +197,19 @@ class DataGenerator(Sequence):
     def __getitem__(self, idx):
         curr_batch = self.indices[idx*self.batch_size:(idx+1)*self.batch_size]
         batch_len = len(curr_batch)
-        if isinstance(self.data, list) and isinstance(self.labels, list):
-            return [self.data[k] for k in curr_batch], np.array([self.labels[k] for k in curr_batch], np.int32)
+        datat = []
+        for i in curr_batch :
+            with Image.open(self.data[i]) as img :
+                datat.append(np.array(img))
+        data = np.empty((len(datat), 720, 1280, 3), dtype='uint8') # if args.dataset = dmd
+
+        for i in range(len(datat)) :
+            data[i] = np.array(datat[i])
+
+        if isinstance(self.labels, list):
+            return data, np.array([self.labels[k] for k in curr_batch]) # 여기 왜 원래는 np.int32가 있었을까
         else:
-            return self.data[curr_batch], self.labels[curr_batch]
+            return data, self.labels[curr_batch]
 
 class DataAugmentation(object):
     def __init__(self, num_classes, dataset, image_shape, ops_list=None, default_pre_aug=None, default_post_aug=None):
@@ -307,6 +306,17 @@ class DataAugmentation(object):
             raise Exception('Unrecognized dataset')
 
     def __call__(self, images, labels, samples_op, samples_mag, use_post_aug, pool=None, chunksize=None, aug_finish=True):
+        # # argument images => images_list
+        # imagest = []
+        # for f in images_list:
+        #     with Image.open(f) as img :
+        #         imagest.append(np.array(img))
+        
+        # images = np.empty((len(imagest), 720, 1280, 3), dtype='uint8') # if args.dataset = dmd
+
+        # for i in range(len(imagest)) :
+        #     images[i] = np.array(imagest[i])
+
         self.check_data_type(images, labels)
 
         self.use_post_aug = use_post_aug

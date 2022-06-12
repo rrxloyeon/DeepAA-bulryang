@@ -91,7 +91,7 @@ with mirrored_strategy.scope(): #.scope()안에서 모델 만들어야함.
 assert args.train_same_labels % mirrored_strategy.num_replicas_in_sync == 0, "Make sure val_same_labels can be divided by num_replicas_in_sync"
 
 available_policies = np.arange(args.l_uniq, dtype=np.int32)[:, np.newaxis]
-print(available_policies)
+# print(available_policies)
 all_using_policies, all_using_optim_policies = [], []
 for k in range(args.n_policies):
     policy_train_ = get_policy(args, op_names=augmentation_search.op_names, ops_mid_magnitude=ops_mid_magnitude, available_policies= available_policies)
@@ -406,9 +406,8 @@ def distributed_train_stage2(dist_inputs):
 def train_policy_stage1(stage, images_val_, labels_val_, images_batch, labels_batch):
     # images_val_ is list of list of ndarray (720, 1280, 3)
     # labels_val_ is list of ndarray (2,)
-    # pdb.set_trace()
-    search_bs = len(images_val_)
-    val_bs = len(images_val_[0])
+    search_bs = len(images_val_) # search_bs == args.train_same_labels
+    val_bs = len(images_val_[0]) 
     assert search_bs == len(images_batch), 'Check dimensions'
     assert len(images_val_) % search_bs == 0, 'Use different validation batch for different search data point'
 
@@ -565,7 +564,7 @@ def train_policy_stage2(stage, images_val_, labels_val_, images_batch, labels_ba
     del tape
 
 
-def search_policy(search_bno, search_bs=1, val_bs=1):# search_bs=16, val_bs=128):
+def search_policy(search_bno, search_bs=16, val_bs=128):
     data_prefetch_iterator = PrefetchGenerator(search_ds, val_ds, args.n_classes, search_bs, val_bs)
 
     for stage in range(1, args.n_policies + 1):
