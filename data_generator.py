@@ -99,7 +99,7 @@ def get_nepes_data(data_root):
 
     return x_train_arr, y_train, x_val_arr, y_val, x_test_arr, y_test, num_classes
 
-def get_dmd_data(data_root):
+def get_dmd_data(data_root, args):
     classes_list = os.listdir(data_root)
     classes = {name: i for i, name in enumerate(classes_list)}
     num_classes = len(classes)
@@ -107,6 +107,10 @@ def get_dmd_data(data_root):
     x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
     for key, value in classes.items(): #클래스 하나씩 접근
         file_list = os.listdir(os.path.join(data_root, key)) #해당 class의 파일 모두 file_list에 저장
+        print("test : original #files :", len(file_list))
+        if args.data_p <= 1.0:
+            file_list = file_list[:int(len(file_list)*args.data_p)]
+            print("test : subset #files :", len(file_list))
         np.random.seed(0)
         np.random.shuffle(file_list)
         length = len(file_list) #해당 class의 사진 개수

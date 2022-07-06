@@ -55,7 +55,7 @@ parser.add_argument('--EXP_G', default=16, type=int, help='Expansion for Jacobia
 parser.add_argument('--train_same_labels', default=16, type=int, help='Sample data from N randomly selected labels')
 parser.add_argument('--mode', default='client', type=str, help='Dummy params')
 parser.add_argument('--port', default=38277, type=int, help='Dummy params')
-
+parser.add_argument('--data-p', default=1.0)
 
 args=parser.parse_args()
 

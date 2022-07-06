@@ -208,7 +208,7 @@ def get_dataset(args):
         test_ds = DataGenerator(x_test, y_test, batch_size=args.test_batch_size, drop_last=False, shuffle=False)
         
     elif args.dataset == 'dmd' :
-        x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_dmd_data(data_root='/home/esoc/datasets/DMD/train')# "/home/esoc/datasets/DMD/train")#'./dataset_test')
+        x_train_, y_train_, x_val, y_val, x_test, y_test, num_class = get_dmd_data(data_root='/home/esoc/datasets/DMD', args)# "/home/esoc/datasets/DMD/train")#'./dataset_test')
 
         np.random.seed(args.seed)
         pt_idx=np.random.choice(len(x_train_),args.pretrain_size, replace=False)
